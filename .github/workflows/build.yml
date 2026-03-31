@@ -4,13 +4,12 @@ on: [push]
 
 jobs:
   build:
-    # OSのリストを定義して並列実行
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
         include:
           - os: windows-latest
-            artifact_name: WikiJsonTool-Windows.exe
+            artifact_name: WikiJsonTool-Windows
           - os: ubuntu-latest
             artifact_name: WikiJsonTool-Linux
           - os: macos-latest
@@ -26,20 +25,30 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install System Dependencies (Linux only)
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          pip install customtkinter mwxml mwparserfromhell pyinstaller
+          sudo apt-get update
+          sudo apt-get install -y python3-tk libtk8.6  # GUIの土台をインストール
+
+      - name: Install Python dependencies
+        run: |
+          pip install customtkinter mwxml mwparserfromhell requests pyinstaller
 
       - name: Build with PyInstaller
         run: |
-          # --noconsole は全OS共通で使えます
-          pyinstaller --onefile --noconsole --name "WikiJsonTool" main.py
+          # --collect-all customtkinter を追加してGUIパーツを全部固める
+          # Linux/macOSでは拡張子なし、Windowsは .exe に自動調整
+          pyinstaller --noconfirm --onefile --windowed \
+            --collect-all customtkinter \
+            --name "WikiJsonTool" main.py
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          # dist配下の成果物をOSごとの名前で保存
           path: |
             dist/WikiJsonTool
             dist/WikiJsonTool.exe
+            dist/WikiJsonTool.app
+ｓ
