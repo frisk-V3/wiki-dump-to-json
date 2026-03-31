@@ -1,0 +1,45 @@
+name: Build Wikipedia Tool (Multi-OS)
+
+on: [push]
+
+jobs:
+  build:
+    # OSのリストを定義して並列実行
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            artifact_name: WikiJsonTool-Windows.exe
+          - os: ubuntu-latest
+            artifact_name: WikiJsonTool-Linux
+          - os: macos-latest
+            artifact_name: WikiJsonTool-macOS
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install customtkinter mwxml mwparserfromhell pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          # --noconsole は全OS共通で使えます
+          pyinstaller --onefile --noconsole --name "WikiJsonTool" main.py
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          # dist配下の成果物をOSごとの名前で保存
+          path: |
+            dist/WikiJsonTool
+            dist/WikiJsonTool.exe
